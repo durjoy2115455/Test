@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced TempMail Generator</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --background: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            transition: 0.3s all;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 1rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #404040;
+            background: #333;
+            color: white;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .email-card {
+            background: #333;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            animation: slideIn 0.5s ease;
+        }
+
+        .history-list {
+            margin-top: 2rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .qr-section {
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .settings {
+            margin: 1.5rem 0;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        .toggle-switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #404040;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔥 TempMail Pro</h1>
+            <p>Generate Disposable Emails with Advanced Features</p>
+        </div>
+
+        <div class="input-group">
+            <input type="email" id="realEmail" placeholder="yourname@gmail.com">
+            <button class="btn" onclick="generateTempEmail()">
+                <span>Generate New</span>
+            </button>
+        </div>
+
+        <div class="settings">
+            <label class="toggle-switch">
+                <input type="checkbox" id="autoCopy">
+                <span class="slider"></span>
+            </label>
+            <span>Auto-Copy to Clipboard</span>
+        </div>
+
+        <div id="emailDisplay" class="email-card" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="margin: 0;">Your Temp Email</h3>
+                    <p id="tempEmail" style="word-break: break-all; margin: 8px 0;"></p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn" onclick="copyToClipboard()">📋 Copy</button>
+                    <button class="btn" onclick="generateQR()">🔳 QR Code</button>
+                </div>
+            </div>
+            <div id="qrCode" class="qr-section"></div>
+        </div>
+
+        <div class="history-list">
+            <h3>📜 Generation History</h3>
+            <div id="historyItems"></div>
+        </div>
+    </div>
+
+    <script>
+        let history = JSON.parse(localStorage.getItem('tempMailHistory')) || [];
+
+        function generateTempEmail() {
+            const realEmail = document.getElementById('realEmail').value;
+            if (!validateEmail(realEmail)) {
+                showError('Please enter a valid Gmail address');
+                return;
+            }
+
+            const randomString = Math.random().toString(36).substring(2, 10);
+            const tempEmail = realEmail.replace('@gmail.com', `+${randomString}@gmail.com`);
+            
+            displayTempEmail(tempEmail);
+            addToHistory(tempEmail);
+            if(document.getElementById('autoCopy').checked) copyToClipboard();
+        }
+
+        function validateEmail(email) {
+            return /^[^\s@]+@gmail\.com$/.test(email);
+        }
+
+        function displayTempEmail(email) {
+            document.getElementById('emailDisplay').style.display = 'block';
+            document.getElementById('tempEmail').textContent = email;
+        }
+
+        function copyToClipboard() {
+            const email = document.getElementById('tempEmail').textContent;
+            navigator.clipboard.writeText(email).then(() => {
+                showToast('📋 Copied to clipboard!');
+            });
+        }
+
+        function generateQR() {
+            const email = document.getElementById('tempEmail').textContent;
+            const qrSize = 200;
+            document.getElementById('qrCode').innerHTML = `
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${email}" 
+                     alt="QR Code" 
+                     style="margin-top: 1rem; border-radius: 8px;">
+            `;
+        }
+
+        function addToHistory(email) {
+            if(!history.includes(email)) {
+                history.unshift(email);
+                if(history.length > 5) history.pop();
+                localStorage.setItem('tempMailHistory', JSON.stringify(history));
+                updateHistory();
+            }
+        }
+
+        function updateHistory() {
+            const historyContainer = document.getElementById('historyItems');
+            historyContainer.innerHTML = history.map(email => `
+                <div class="email-card" style="margin: 8px 0; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>${email}</span>
+                        <div>
+                            <button class="btn" onclick="navigator.clipboard.writeText('${email}')">📋</button>
+                            <button class="btn" onclick="deleteEmail('${email}')">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteEmail(email) {
+            history = history.filter(e => e !== email);
+            localStorage.setItem('tempMailHistory', JSON.stringify(history));
+            updateHistory();
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--primary);
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                animation: slideIn 0.3s ease;
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        function showError(message) {
+            const error = document.createElement('div');
+            error.textContent = message;
+            error.style = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #dc2626;
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                animation: slideIn 0.3s ease;
+            `;
+            document.body.appendChild(error);
+            setTimeout(() => error.remove(), 2000);
+        }
+
+        // Initialize history on load
+        updateHistory();
+    </script>
+</body>
+</html>
